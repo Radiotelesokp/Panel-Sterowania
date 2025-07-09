@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Sterowania Radioteleskopu</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .btn {
+      @apply bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded shadow;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <div class="p-4 space-y-4">
+    <!-- NAGŁÓWEK -->
+    <header class="bg-white shadow rounded p-4 flex items-center justify-between">
+      <h1 class="text-2xl font-bold">Panel Sterowania Radioteleskopu</h1>
+      <div id="user-status">
+      </div>
+    </header>
+
+    <!-- GŁÓWNA SIATKA PODZIELONA NA 2 KOLUMNY -->
+    <main class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- SDR/ANALIZA WIDMA -->
+      <section id="sdr" class="bg-white rounded shadow p-4 flex flex-col">
+        <h2 class="text-xl font-semibold mb-2">Analiza Widma (SDR)</h2>
+        <div id="spectrum-chart" class="flex-1 mb-4">
+          <!-- WYKRES WIDMA -->
+        </div>
+        <div class="flex space-x-2">
+          <button class="btn">Start</button>
+          <button class="btn">Stop</button>
+          <button class="btn">Zapisz próbkę</button>
+        </div>
+        <textarea id="sdr-terminal" class="mt-4 h-32 bg-gray-800 text-green-400 p-2 rounded font-mono" placeholder="Terminal SDR..."></textarea>
+      </section>
+
+      <!-- STEROWANIE ANTENĄ -->
+      <section id="motion" class="bg-white rounded shadow p-4 flex flex-col">
+        <h2 class="text-xl font-semibold mb-2">Sterowanie Ruchem Anteny</h2>
+
+        <!-- POZYCJA I PLIK TRASY -->
+        <div class="grid grid-cols-2 gap-2 mb-4">
+          <div>
+            <p>Aktualna pozycja:</p>
+            <p id="current-az" class="font-mono">Az: --°</p>
+            <p id="current-el" class="font-mono">El: --°</p>
+          </div>
+          <div>
+            <p>Załaduj trasę:</p>
+            <input type="file" class="mt-1" accept=".json,.csv" />
+          </div>
+        </div>
+
+        <!-- WYKRES TRAJEKTORII -->
+        <div id="trajectory-chart" class="flex-1 mb-4">
+        </div>
+
+        <!-- TERMINAL ANTENY -->
+        <div id="terminal-container" class="h-64 overflow-y-auto bg-gray-900 text-green-400 p-2 rounded font-mono text-sm">
+          <div id="terminal-output"></div>
+          <div id="terminal-input" contenteditable="true" class="outline-none whitespace-pre">> </div>
+        </div>
+
+      </section>
+
+      <!-- KAMERA I URZĄDZENIA -->
+      <section id="misc" class="bg-white rounded shadow p-4 lg:col-span-2">
+        <h2 class="text-xl font-semibold mb-2">Inne Urządzenia i Kamera</h2>
+        <div class="flex flex-col lg:flex-row lg:space-x-4">
+          <div class="mb-4 lg:mb-0">
+            <button class="btn mr-2">Wyłącz Urządzenie 1</button>
+            <button class="btn">Wyłącz Urządzenie 2</button>
+          </div>
+          <div id="camera-feed" class="flex-1 bg-black rounded h-48">
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const container = document.getElementById("terminal-container");
+  const output = document.getElementById("terminal-output");
+  const input = document.getElementById("terminal-input");
+
+  let history = [];
+  let historyIndex = -1;
+
+  input.focus();
+
+  container.addEventListener("click", () => {
+    setTimeout(() => {
+      placeCursorAtEnd(input);
+    }, 0);
+  });
+
+  input.addEventListener("keydown", async (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+
+      const raw = input.innerText.trim();
+      const command = raw.replace(/^> ?/, "").trim();
+
+      if (command) {
+        history.push(command);
+        historyIndex = history.length;
+
+        const commandLine = document.createElement("div");
+        commandLine.textContent = `> ${command}`;
+        output.appendChild(commandLine);
+
+        const responseLine = document.createElement("div");
+        responseLine.textContent = await sendCommandToServer(command);
+        output.appendChild(responseLine);
+      }
+
+      input.innerText = "> ";
+      placeCursorAtEnd(input);
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (historyIndex > 0) {
+        historyIndex--;
+        input.innerText = `> ${history[historyIndex]}`;
+        placeCursorAtEnd(input);
+      }
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (historyIndex < history.length - 1) {
+        historyIndex++;
+        input.innerText = `> ${history[historyIndex]}`;
+        placeCursorAtEnd(input);
+      } else {
+        input.innerText = "> ";
+      }
+      placeCursorAtEnd(input);
+    }
+  });
+
+  function placeCursorAtEnd(el) {
+    const range = document.createRange();
+    const sel = window.getSelection();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  async function sendCommandToServer(command) {
+    try {
+      const res = await fetch("/api/command/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command }),
+      });
+
+      const data = await res.json();
+
+      if (command === "position" && data.output.includes("Az=")) {
+        const azMatch = data.output.match(/Az=([\d.]+)/);
+        const elMatch = data.output.match(/El=([\d.]+)/);
+        if (azMatch && elMatch) {
+          document.getElementById("current-az").textContent = `Az: ${azMatch[1]}°`;
+          document.getElementById("current-el").textContent = `El: ${elMatch[1]}°`;
+        }
+      }
+
+      return data.output || "OK";
+    } catch (e) {
+      return `Błąd: ${e.message}`;
+    }
+  }
+});
+</script>
+</body>
+</html>
