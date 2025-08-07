@@ -1,12 +1,6 @@
-[submodule "Panel_sterowania_radioteleskop/libs/SDRLibrary"]
-	path = Panel_sterowania_radioteleskop/libs/SDRLibrary
+[submodule "Panel_sterowania_radioteleskop/SDR"]
+	path = Panel_sterowania_radioteleskop/SDR
 	url = https://github.com/Radiotelesokp/SDR.git
-[submodule "libs/Sterownik"]
-	path = libs/Sterownik
-	url = https://github.com/Radiotelesokp/Sterownik.git
-[submodule "libs/SDRLibrary"]
-	path = libs/SDRLibrary
-	url = https://github.com/Radiotelesokp/SDR.git
-[submodule "Panel_sterowania_radioteleskop/libs/Sterownik"]
-	path = Panel_sterowania_radioteleskop/libs/Sterownik
+[submodule "Panel_sterowania_radioteleskop/Sterownik"]
+	path = Panel_sterowania_radioteleskop/Sterownik
 	url = https://github.com/Radiotelesokp/Sterownik.git

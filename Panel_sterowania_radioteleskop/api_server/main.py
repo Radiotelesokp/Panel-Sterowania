@@ -20,19 +20,22 @@ from fastapi.responses import StreamingResponse
 import multiprocessing
 import io
 
-from libs.SDRLibrary.SDRLibrary import bias_tee, spectrum_scan
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(os.path.join(BASE_DIR, "Sterownik"))
+sys.path.append(os.path.join(BASE_DIR, "SDR"))
 
-# Import z głównego folderu
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from libs.Sterownik.antenna_controller import (
+from antenna_controller import (
     AntennaControllerFactory, AntennaController, Position, AntennaError,
     MotorConfig, AntennaLimits, get_best_spid_port,
     AntennaState, PositionCalibration, DEFAULT_SPID_PORT
 )
-from libs.Sterownik.astronomic_calculator import (
+
+from astronomic_calculator import (
     AstronomicalCalculator, ObserverLocation, AstronomicalObjectType
 )
+
+from SDRLibrary.spectrum_scan import SpectrumScanner
+from SDRLibrary.bias_tee import BiasTee
 
 # Konfiguracja logowania
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -610,7 +613,7 @@ async def bias_tee_status():
     """Zwraca aktualny status włącznika Bias-Tee (on/off)"""
     try:
         sdr = SoapySDR.Device({})
-        bias = bias_tee.BiasTee(sdr)
+        bias = BiasTee(sdr)
         return {"status": bias.getStatus()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Błąd pobierania statusu Bias-Tee: {e}")
@@ -620,7 +623,7 @@ async def bias_tee_control(action: str):
     """Włącza lub wyłącza Bias-Tee na podstawie parametru action"""
     try:
         sdr = SoapySDR.Device({})
-        bias = bias_tee.BiasTee(sdr)
+        bias = BiasTee(sdr)
         bias.controlBiasTee(action)
         return {"status": bias.getStatus()}
     except ValueError as e:
@@ -643,10 +646,10 @@ def scan_worker(start_freq, stop_freq, step_freq, sample_rate, gain, n_samples, 
 
     try:
         sdr = SoapySDR.Device({})
-        bias = bias_tee.BiasTee(sdr)
+        bias = BiasTee(sdr)
         bias.controlBiasTee(bias_tee_state)
 
-        scanner = spectrum_scan.SpectrumScanner(
+        scanner = SpectrumScanner(
             sdr=sdr,
             start_freq=start_freq,
             stop_freq=stop_freq,
