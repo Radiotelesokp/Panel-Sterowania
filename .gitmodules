@@ -1,5 +1,5 @@
 [submodule "Panel_sterowania_radioteleskop/SDR"]
-	path = SDR
+	path = Panel_sterowania_radioteleskop/SDR
 	url = https://github.com/Radiotelesokp/SDR.git
 [submodule "Panel_sterowania_radioteleskop/Sterownik"]
 	path = Panel_sterowania_radioteleskop/Sterownik
