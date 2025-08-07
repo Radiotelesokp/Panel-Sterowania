@@ -7,3 +7,6 @@
 [submodule "Panel_sterowania_radioteleskop/api_server/SDR"]
 	path = Panel_sterowania_radioteleskop/api_server/SDR
 	url = https://github.com/Radiotelesokp/SDR.git
+[submodule "Panel_sterowania_radioteleskop/SDRmodule"]
+	path = Panel_sterowania_radioteleskop/SDRmodule
+	url = https://github.com/Radiotelesokp/SDR.git

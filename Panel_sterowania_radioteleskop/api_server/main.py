@@ -22,7 +22,7 @@ import io
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(os.path.join(BASE_DIR, "Sterownik"))
-sys.path.append(os.path.join(BASE_DIR, "SDR"))
+sys.path.append(os.path.join(BASE_DIR, "SDRmodule"))
 
 from antenna_controller import (
     AntennaControllerFactory, AntennaController, Position, AntennaError,
