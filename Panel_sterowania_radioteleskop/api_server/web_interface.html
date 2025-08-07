@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sterownik Anteny Radioteleskopu</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .status-sidebar {
+            width: 300px;
+            background: rgba(0,0,0,0.3);
+            border-right: 2px solid rgba(255,255,255,0.2);
+            transition: width 0.3s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-sidebar.collapsed {
+            width: 50px;
+        }
+
+        .status-toggle {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .status-toggle:hover {
+            background: #45a049;
+        }
+
+        .status-content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .status-sidebar.collapsed .status-content {
+            display: none;
+        }
+
+        .status-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .status-label {
+            font-size: 12px;
+            color: #ccc;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #90EE90;
+        }
+
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .emergency-stop {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+
+        .emergency-stop:hover {
+            background: #cc0000;
+        }
+
+        .main-layout {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .log-section {
+            flex: 1.25;
+            display: flex;
+            flex-direction: column;
+            margin: 20px;
+            min-height: 0;
+        }
+
+        .controls-section {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 100%;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            height: fit-content;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #90EE90;
+            font-size: 1.2em;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        input[type="number"], input[type="text"], select {
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 5px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 14px;
+        }
+
+        input[type="number"]:focus, input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #90EE90;
+            background: rgba(255,255,255,0.15);
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tracking-button {
+            width: 160px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .tracking-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+        }
+
+        .tracking-buttons .tracking-button {
+            flex: 0 0 160px;
+        }
+
+        .astronomical-objects {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .object-button {
+            background: #2196F3;
+            padding: 12px 8px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .object-button:hover {
+            background: #1976D2;
+        }
+
+        .object-button.selected {
+            background: #FF9800;
+        }
+
+        .manual-control {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+
+        .axis-control {
+            text-align: center;
+        }
+
+        .axis-control h4 {
+            margin: 0 0 10px 0;
+            color: #ccc;
+        }
+
+        .axis-buttons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .axis-btn {
+            background: #FF6B35;
+            border: none;
+            color: white;
+            padding: 15px 20px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+            user-select: none;
+            min-width: 60px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .axis-btn:hover {
+            background: #E55A2B;
+            transform: scale(1.1);
+        }
+
+        .axis-btn:active {
+            background: #CC4E24;
+            transform: scale(0.95);
+        }
+
+        .axis-label {
+            font-weight: bold;
+            color: #ccc;
+            min-width: 30px;
+        }
+
+        .log-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        #systemLog {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            flex: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid #333;
+            min-height: 0;
+            max-height: none;
+        }
+
+        .connected {
+            color: #90EE90;
+        }
+
+        .disconnected {
+            color: #ff6b6b;
+        }
+
+        .error {
+            color: #ff6b6b;
+            background: rgba(255, 0, 0, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .success {
+            color: #90EE90;
+            background: rgba(0, 255, 0, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        @media (max-width: 1200px) {
+            .main-container {
+                flex-direction: column;
+                height: auto;
+                overflow: auto;
+            }
+
+            .status-sidebar {
+                width: 100%;
+                height: auto;
+            }
+
+            .status-sidebar.collapsed {
+                width: 100%;
+                height: 50px;
+            }
+
+            .main-layout {
+                flex-direction: column;
+            }
+
+            .controls-section {
+                grid-template-columns: 1fr;
+            }
+        }
+        .input-pair {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.input-pair input {
+  width: 140px; /* ← to jest ten skrót – dopasuj wartość do czerwonej linii */
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 5px;
+  background: rgba(255,255,255,0.1);
+  color: white;
+  font-size: 14px;
+}
+
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="status-sidebar" id="statusSidebar">
+            <button class="status-toggle" onclick="toggleStatusSidebar()">
+                <span id="toggleIcon">◄</span>
+            </button>
+            <div class="status-content">
+                <h3 style="margin-top: 0; color: #90EE90;">Status Systemu</h3>
+
+                <div class="status-item">
+                    <div class="status-label">Połączenie</div>
+                    <div class="status-value" id="connectionStatus">Rozłączony</div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-label">Port</div>
+                    <div class="status-value" id="portStatus">---</div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-label">Azymut</div>
+                    <div class="status-value" id="azimuthValue">---°</div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-label">Elewacja</div>
+                    <div class="status-value" id="elevationValue">---°</div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-label">Stan</div>
+                    <div class="status-value" id="movingStatus">Zatrzymany</div>
+                </div>
+
+                <div class="status-item">
+                    <div class="status-label">Czas</div>
+                    <div class="status-value" id="currentTime">--:--:--</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="header">
+                <h1>Sterownik Anteny Radioteleskopu</h1>
+            </div>
+
+            <button class="emergency-stop" onclick="emergencyStop()">STOP AWARYJNY</button>
+
+            <div class="main-layout">
+                <div class="log-section">
+                    <div class="card" style="flex: 1; display: flex; flex-direction: column; height: 100%; min-height: 400px;">
+                        <div class="log-controls">
+                            <h3 style="margin: 0;">Log Systemu</h3>
+                            <div>
+                                <button onclick="clearLog()">Wyczyść</button>
+                                <button onclick="toggleAutoScroll()">Auto-scroll: <span id="autoScrollStatus">ON</span></button>
+                            </div>
+                        </div>
+                        <div id="systemLog"></div>
+                    </div>
+                </div>
+
+                <div class="controls-section">
+                    <div class="card">
+                        <h3>Połączenie</h3>
+                        <div class="control-group">
+                            <label>Port szeregowy:</label>
+                            <div class="input-group">
+                                <select id="portSelect">
+                                    <option value="">Auto-detect</option>
+                                    <option value="/dev/tty.usbserial-A10PDNT7">/dev/tty.usbserial-A10PDNT7</option>
+                                    <option value="/dev/ttyUSB0">/dev/ttyUSB0</option>
+                                    <option value="COM10">COM10</option>
+                                </select>
+                                <button onclick="refreshPorts()">Odśwież</button>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label>
+                                <input type="checkbox" id="simulatorMode"> Tryb symulatora
+                            </label>
+                        </div>
+                        <div class="button-group">
+                            <button onclick="connectAntenna()">Połącz</button>
+                            <button onclick="disconnectAntenna()">Rozłącz</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Sterowanie Pozycją</h3>
+                        <div class="control-group">
+                            <label>Azymut (0-360°):</label>
+                            <input type="number" id="azimuthInput" min="0" max="360" step="0.1" value="0">
+                        </div>
+                        <div class="control-group">
+                            <label>Elewacja (0-90°):</label>
+                            <input type="number" id="elevationInput" min="0" max="90" step="0.1" value="0">
+                        </div>
+                        <div class="button-group">
+                            <button onclick="moveToPosition()">Ustaw Pozycję</button>
+                            <button onclick="stopAntenna()">Stop</button>
+                            <button onclick="getCurrentPosition()">Odczytaj Pozycję</button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Sterowanie Ręczne</h3>
+                        <div class="manual-control">
+                            <div class="axis-control">
+                                <h4>Azymut</h4>
+                                <div class="axis-buttons">
+                                    <button class="axis-btn" 
+                                            onclick="singleAxisMove('azimuth', 'negative')">◄</button>
+                                    <span class="axis-label">Az</span>
+                                    <button class="axis-btn" 
+                                            onclick="singleAxisMove('azimuth', 'positive')">►</button>
+                                </div>
+                            </div>
+                            <div class="axis-control">
+                                <h4>Elewacja</h4>
+                                <div class="axis-buttons">
+                                    <button class="axis-btn" 
+                                            onclick="singleAxisMove('elevation', 'positive')">▲</button>
+                                    <span class="axis-label">El</span>
+                                    <button class="axis-btn" 
+                                            onclick="singleAxisMove('elevation', 'negative')">▼</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label>Wielkość kroku (°):</label>
+                            <input type="number" id="stepSizeInput" min="0.1" max="10" step="0.1" value="1.0">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Śledzenie Astronomiczne</h3>
+
+                        <div class="control-group">
+                            <label>Wybierz obiekt:</label>
+                            <div class="astronomical-objects">
+                                <div class="object-button" onclick="selectAstronomicalObject('sun', 'SUN')">Słońce</div>
+                                <div class="object-button" onclick="selectAstronomicalObject('moon', 'MOON')">Księżyc</div>
+                                <div class="object-button" onclick="selectAstronomicalObject('mercury', 'PLANET')">Merkury</div>
+                                <div class="object-button" onclick="selectAstronomicalObject('venus', 'PLANET')">Wenus</div>
+                                <div class="object-button" onclick="selectAstronomicalObject('mars', 'PLANET')">Mars</div>
+                                <div class="object-button" onclick="selectAstronomicalObject('jupiter', 'PLANET')">Jowisz</div>
+                                <div class="object-button" onclick="selectAstronomicalObject('saturn', 'PLANET')">Saturn</div>
+                                <div class="object-button" onclick="selectAstronomicalObject('uranus', 'PLANET')">Uran</div>
+                                <div class="object-button" onclick="selectAstronomicalObject('neptune', 'PLANET')">Neptun</div>
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label>Popularne gwiazdy:</label>
+                            <div class="astronomical-objects">
+                                <div class="object-button star-button" onclick="selectAstronomicalObject('Vega', 'STAR')">Vega</div>
+                                <div class="object-button star-button" onclick="selectAstronomicalObject('Sirius', 'STAR')">Syriusz</div>
+                                <div class="object-button star-button" onclick="selectAstronomicalObject('Polaris', 'STAR')">Gwiazda Polarna</div>
+                                <div class="object-button star-button" onclick="selectAstronomicalObject('Betelgeuse', 'STAR')">Betelgeza</div>
+                                <div class="object-button star-button" onclick="selectAstronomicalObject('Rigel', 'STAR')">Rigel</div>
+                                <div class="object-button star-button" onclick="selectAstronomicalObject('Altair', 'STAR')">Altair</div>
+                                <div class="object-button star-button" onclick="selectAstronomicalObject('Deneb', 'STAR')">Deneb</div>
+                                <div class="object-button star-button" onclick="selectAstronomicalObject('Antares', 'STAR')">Antares</div>
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label>Wybrany obiekt:</label>
+                            <input type="text" id="objectNameInput" placeholder="Wybierz obiekt z listy" readonly>
+                            <div id="objectInfo" style="margin-top: 5px; font-size: 12px; color: #ccc;"></div>
+                        </div>
+
+                        <div class="control-group" style="display: none;">
+                            <label>Typ obiektu:</label>
+                            <select id="objectTypeSelect">
+                                <option value="STAR">Gwiazda</option>
+                                <option value="PLANET">Planeta</option>
+                                <option value="MOON">Księżyc</option>
+                                <option value="SUN">Słońce</option>
+                            </select>
+                        </div>
+
+                        <div class="tracking-buttons">
+                            <button class="tracking-button" onclick="startTracking()">Rozpocznij Śledzenie</button>
+                            <button class="tracking-button" onclick="stopTracking()">Zatrzymaj Śledzenie</button>
+                            <button class="tracking-button" onclick="getObjectPosition()">Pozycja Obiektu</button>
+                            <button class="tracking-button" onclick="moveToObject()">Przesuń do Obiektu</button>
+                        </div>
+                    </div>
+
+                    <button class="advanced-options-toggle" onclick="toggleAdvancedOptions(this)">
+                        Opcje Zaawansowane ▼
+                    </button>
+
+                    <div id="advancedOptionsContainer" class="advanced-options-container" style="display: none;">
+                        <div class="card">
+                            <h3>Zapamiętane Pozycje</h3>
+                            <div class="control-group">
+                                <label>Szybki wybór pozycji:</label>
+                                <div class="astronomical-objects">
+                                    <div class="object-button" onclick="setPresetPosition(0, 90)">Zenit</div>
+                                    <div class="object-button" onclick="setPresetPosition(0, 10)">Północ</div>
+                                    <div class="object-button" onclick="setPresetPosition(90, 10)">Wschód</div>
+                                    <div class="object-button" onclick="setPresetPosition(180, 10)">Południe</div>
+                                    <div class="object-button" onclick="setPresetPosition(270, 10)">Zachód</div>
+                                    <div class="object-button" onclick="setPresetPosition(0, 0)">Pozycja domowa</div>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label>Pozycje techniczne:</label>
+                                <div class="astronomical-objects">
+                                    <div class="object-button" onclick="setPresetPosition(45, 45)">NE 45°</div>
+                                    <div class="object-button" onclick="setPresetPosition(135, 45)">SE 45°</div>
+                                    <div class="object-button" onclick="setPresetPosition(225, 45)">SW 45°</div>
+                                    <div class="object-button" onclick="setPresetPosition(315, 45)">NW 45°</div>
+                                    <div class="object-button" onclick="setPresetPosition(0, 30)">Północ 30°</div>
+                                    <div class="object-button" onclick="setPresetPosition(180, 60)">Południe 60°</div>
+                                </div>
+                            </div>
+                            <div class="button-group">
+                                <button onclick="moveToPresetPosition()">Przesuń do Pozycji</button>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Kalibracja Anteny</h3>
+                            <div class="control-group">
+                                <label>Kalibracja północy:</label>
+                                <div style="font-size: 12px; color: #ccc; margin-bottom: 10px;">
+                                    Ustaw antenę w kierunku północy i kliknij "Kalibruj północ"
+                                </div>
+                                <div class="button-group">
+                                    <button onclick="calibrateNorth()">Kalibruj Północ</button>
+                                    <button onclick="resetCalibration()">Resetuj Kalibrację</button>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label>Ustawienia osi:</label>
+                                <div style="margin: 10px 0;">
+                                    <label style="display: flex; align-items: center; margin-bottom: 5px;">
+                                        <input type="checkbox" id="invertAzimuth" style="margin-right: 10px;">
+                                        Odwróć oś azymutu
+                                    </label>
+                                    <label style="display: flex; align-items: center;">
+                                        <input type="checkbox" id="invertElevation" style="margin-right: 10px;">
+                                        Odwróć oś elewacji
+                                    </label>
+                                </div>
+                                <div class="button-group">
+                                    <button onclick="applyAxisSettings()">Zastosuj Ustawienia</button>
+                                </div>
+                            </div>
+                            <div class="control-group">
+                                <label>Offset kalibracji:</label>
+                                <div class="input-group">
+                                    <input type="number" id="azimuthOffset" placeholder="Azymut offset (°)" step="0.1" value="0">
+                                    <input type="number" id="elevationOffset" placeholder="Elewacja offset (°)" step="0.1" value="0">
+                                </div>
+                                <div class="button-group">
+                                    <button onclick="applyOffsets()">Zastosuj Offset</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Lokalizacja Obserwatora</h3>
+                            <div class="control-group">
+                                <label>Szerokość geograficzna:</label>
+                                <input type="number" id="latitudeInput" min="-90" max="90" step="0.000001" value="52.4064">
+                            </div>
+                            <div class="control-group">
+                                <label>Długość geograficzna:</label>
+                                <input type="number" id="longitudeInput" min="-180" max="180" step="0.000001" value="16.9252">
+                            </div>
+                            <div class="control-group">
+                                <label>Wysokość n.p.m. (m):</label>
+                                <input type="number" id="elevationObsInput" min="0" step="1" value="75">
+                            </div>
+                            <div class="control-group">
+                                <label>Nazwa lokalizacji:</label>
+                                <input type="text" id="locationNameInput" value="Poznań">
+                            </div>
+                            <div class="button-group">
+                                <button onclick="setObserverLocation()">Ustaw Lokalizację</button>
+                                <button onclick="getObserverLocation()">Pobierz Lokalizację</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+    <h3>Skanowanie Widma (SDR)</h3>
+
+<div class="control-group">
+  <label>Zakres częstotliwości (Hz):</label>
+
+  <div class="input-pair">
+    <input type="number" id="startFreqInput" value="1000000000">
+    <span>Początek zakresu (Hz)</span>
+  </div>
+
+  <div class="input-pair">
+    <input type="number" id="stopFreqInput" value="1100000000">
+    <span>Koniec zakresu (Hz)</span>
+  </div>
+
+  <div class="input-pair">
+    <input type="number" id="stepFreqInput" value="1000000">
+    <span>Krok skanowania (Hz)</span>
+  </div>
+</div>
+
+
+<div class="control-group">
+  <label>Parametry próbkowania:</label>
+
+  <div class="input-pair">
+    <input type="number" id="sampleRateInput" value="10000000">
+    <span>Szerokość pasma analizowanego w jednym kroku (Hz)</span>
+  </div>
+
+  <div class="input-pair">
+    <input type="number" id="gainInput" value="40">
+    <span>Wzmocnienie anteny w dB</span>
+  </div>
+
+  <div class="input-pair">
+    <input type="number" id="nSamplesInput" value="2048">
+    <span>Liczba próbek FFT na punkt</span>
+  </div>
+</div>
+
+
+<div class="control-group">
+  <label>Bias-Tee:</label>
+  <select id="biasTeeSelect" title="Bias-Tee zasila np. przedwzmacniacz antenowy napięciem 5V">
+    <option value="off">Wyłączony</option>
+    <option value="on">Włączony</option>
+  </select>
+</div>
+
+<div class="button-group">
+  <button onclick="startSpectrumScan()">Skanuj Widmo</button>
+  <button onclick="downloadSpectrumResults()">Pobierz Wyniki</button>
+</div>
+
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        let autoScroll = true;
+        let isConnected = false;
+        let updateInterval;
+        let selectedObject = null;
+
+        // API Base URL
+        const API_BASE = '';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Interfejs webowy uruchomiony');
+            log('Sprawdzam połączenie z API...');
+
+            refreshPorts();
+            checkApiConnection();
+            startStatusUpdates();
+            updateTime();
+            setInterval(updateTime, 1000);
+
+            // Keyboard shortcut for emergency stop
+            document.addEventListener('keydown', function(e) {
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    emergencyStop();
+                }
+            });
+
+            // Inicjalne wyłączenie wszystkich kontrolek do momentu połączenia
+            updateControlsState();
+        });
+
+        // Funkcja aktualizująca stan kontrolek w zależności od stanu połączenia
+        function updateControlsState() {
+            const controlButtons = document.querySelectorAll('.card:not(:first-child) button');
+            const controlInputs = document.querySelectorAll('.card:not(:first-child) input, .card:not(:first-child) select');
+            const advancedToggle = document.querySelector('.advanced-options-toggle');
+            const objectButtons = document.querySelectorAll('.object-button');
+
+            // Ustaw stan aktywności dla wszystkich kontrolek poza panelem połączenia
+            controlButtons.forEach(button => {
+                button.disabled = !isConnected;
+            });
+
+            controlInputs.forEach(input => {
+                input.disabled = !isConnected;
+            });
+
+            // Blokowanie przycisków obiektów astronomicznych
+            objectButtons.forEach(button => {
+                if (!isConnected) {
+                    // Wyłącz możliwość klikania na przyciski
+                    button.style.pointerEvents = 'none';
+                    button.style.opacity = '0.5';
+                    button.classList.remove('selected');
+                } else {
+                    // Włącz możliwość klikania
+                    button.style.pointerEvents = 'auto';
+                    button.style.opacity = '1';
+                }
+            });
+
+            // Opcje zaawansowane też blokujemy
+            if (advancedToggle) {
+                advancedToggle.disabled = !isConnected;
+
+                // Jeśli nie jesteśmy połączeni, ukryj panel opcji zaawansowanych
+                if (!isConnected && document.getElementById('advancedOptionsContainer').style.display !== 'none') {
+                    toggleAdvancedOptions(advancedToggle);
+                }
+            }
+
+            // Resetuj wybrany obiekt jeśli rozłączono
+            if (!isConnected) {
+                selectedObject = null;
+                document.getElementById('objectNameInput').value = '';
+                document.getElementById('objectInfo').textContent = '';
+            }
+        }
+
+        function updateTime() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleTimeString();
+        }
+
+        function toggleStatusSidebar() {
+            const sidebar = document.getElementById('statusSidebar');
+            const icon = document.getElementById('toggleIcon');
+
+            sidebar.classList.toggle('collapsed');
+            icon.textContent = sidebar.classList.contains('collapsed') ? '►' : '◄';
+        }
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('systemLog');
+
+            let levelName = 'INFO';
+            switch(type) {
+                case 'error':
+                    levelName = 'ERROR';
+                    break;
+                case 'success':
+                    levelName = 'INFO';
+                    break;
+                case 'warning':
+                    levelName = 'WARNING';
+                    break;
+            }
+
+            logElement.textContent += `${timestamp} - main - ${levelName} - ${message}\n`;
+
+            if (autoScroll) {
+                logElement.scrollTop = logElement.scrollHeight;
+            }
+        }
+
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            try {
+                const config = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (data) {
+                    config.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(API_BASE + endpoint, config);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                log(`Błąd API: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        async function checkApiConnection() {
+            try {
+                await apiCall('/');
+                log('Połączenie z API OK', 'success');
+            } catch (error) {
+                log('Błąd połączenia z API', 'error');
+            }
+        }
+
+        async function refreshPorts() {
+            try {
+                const response = await apiCall('/ports');
+                const portSelect = document.getElementById('portSelect');
+
+                // Clear existing options except predefined ones
+                const predefinedPorts = [
+                    { value: '', text: 'Auto-detect' },
+                    { value: '/dev/tty.usbserial-A10PDNT7', text: '/dev/tty.usbserial-A10PDNT7' },
+                    { value: '/dev/ttyUSB0', text: '/dev/ttyUSB0' },
+                    { value: 'COM10', text: 'COM10' }
+                ];
+
+                portSelect.innerHTML = '';
+                predefinedPorts.forEach(port => {
+                    const option = document.createElement('option');
+                    option.value = port.value;
+                    option.textContent = port.text;
+                    portSelect.appendChild(option);
+                });
+
+                // Add any additional detected ports
+                response.ports.forEach(port => {
+                    if (!predefinedPorts.some(p => p.value === port)) {
+                        const option = document.createElement('option');
+                        option.value = port;
+                        option.textContent = port;
+                        portSelect.appendChild(option);
+                    }
+                });
+
+                log('Porty odświeżone', 'success');
+            } catch (error) {
+                log('Błąd odświeżania portów', 'error');
+            }
+        }
+
+        function selectAstronomicalObject(name, type) {
+            // Remove selection from all buttons
+            document.querySelectorAll('.object-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            // Add selection to clicked button
+            event.target.classList.add('selected');
+
+            // Update input fields
+            document.getElementById('objectNameInput').value = name;
+            document.getElementById('objectTypeSelect').value = type;
+
+            selectedObject = { name, type };
+            log(`Wybrano obiekt: ${name} (${type})`);
+
+            // Update object info
+            updateObjectInfo(name, type);
+        }
+
+        function updateObjectInfo(name, type) {
+            const infoElement = document.getElementById('objectInfo');
+            let info = '';
+
+            switch(type) {
+                case 'SUN':
+                    info = 'Słońce - główna gwiazda Układu Słonecznego';
+                    break;
+                case 'MOON':
+                    info = 'Księżyc - naturalny satelita Ziemi';
+                    break;
+                case 'PLANET':
+                    const planetInfo = {
+                        'mercury': 'Merkury - najmniejsza planeta Układu Słonecznego',
+                        'venus': 'Wenus - najgorętszą planetą Układu Słonecznego',
+                        'mars': 'Mars - "Czerwona Planeta"',
+                        'jupiter': 'Jowisz - największa planeta Układu Słonecznego',
+                        'saturn': 'Saturn - planeta z pierścieniami',
+                        'uranus': 'Uran - lodowa planeta',
+                        'neptune': 'Neptun - najbardziej odległa planeta'
+                    };
+                    info = planetInfo[name.toLowerCase()] || `${name} - planeta`;
+                    break;
+                case 'STAR':
+                    const starInfo = {
+                        'vega': 'Vega - najjaśniejsza gwiazda w Lirze',
+                        'sirius': 'Syriusz - najjaśniejsza gwiazda na niebie',
+                        'polaris': 'Gwiazda Polarna - wskazuje kierunek północy',
+                        'betelgeuse': 'Betelgeza - czerwony nadolbrzym w Orionie',
+                        'rigel': 'Rigel - niebieski nadolbrzym w Orionie',
+                        'altair': 'Altair - gwiazda w Orle',
+                        'deneb': 'Deneb - bardzo jasna gwiazda w Łabędziu',
+                        'antares': 'Antares - czerwony nadolbrzym w Skorpionie'
+                    };
+                    info = starInfo[name.toLowerCase()] || `${name} - gwiazda`;
+                    break;
+                default:
+                    info = `${name} - obiekt astronomiczny`;
+            }
+
+            infoElement.textContent = info;
+        }
+
+        async function getObjectPosition() {
+            if (!selectedObject) {
+                log('Nie wybrano obiektu astronomicznego', 'error');
+                return;
+            }
+
+            try {
+                // Automatycznie ustaw lokalizację jeśli nie jest ustawiona
+                await ensureObserverLocationSet();
+
+                const response = await apiCall(`/astronomical/position/${selectedObject.name}`);
+                log(`Pozycja ${selectedObject.name}: Az ${response.azimuth.toFixed(1)}°, El ${response.elevation.toFixed(1)}°`);
+
+                // Optionally update position inputs
+                document.getElementById('azimuthInput').value = response.azimuth.toFixed(1);
+                document.getElementById('elevationInput').value = response.elevation.toFixed(1);
+
+            } catch (error) {
+                log(`Błąd pobierania pozycji obiektu ${selectedObject.name}`, 'error');
+            }
+        }
+
+        async function connectAntenna() {
+            try {
+                const port = document.getElementById('portSelect').value;
+                const useSimulator = document.getElementById('simulatorMode').checked;
+
+                log(useSimulator ? 'Łączę z symulatorem...' : 'Łączę ze sprzętem...');
+
+                const config = {
+                    port: port || null,
+                    use_simulator: useSimulator
+                };
+
+                await apiCall('/connect', 'POST', config);
+                isConnected = true;
+                updateConnectionStatus();
+                log('Połączenie nawiązane', 'success');
+                
+                // Wczytaj kalibrację po połączeniu
+                setTimeout(() => {
+                    loadCalibrationSettings();
+                }, 1000);
+
+            } catch (error) {
+                log(`Błąd połączenia z ${document.getElementById('simulatorMode').checked ? 'symulatorem' : 'sprzętem'}: ${error.message}`, 'error');
+                isConnected = false;
+                updateConnectionStatus();
+            }
+        }
+
+        async function disconnectAntenna() {
+            try {
+                await apiCall('/disconnect', 'POST');
+                isConnected = false;
+                updateConnectionStatus();
+                log('Rozłączono', 'success');
+            } catch (error) {
+                log('Błąd rozłączania', 'error');
+            }
+        }
+
+        async function moveToPosition() {
+            try {
+                const azimuth = parseFloat(document.getElementById('azimuthInput').value);
+                const elevation = parseFloat(document.getElementById('elevationInput').value);
+
+                if (isNaN(azimuth) || isNaN(elevation)) {
+                    log('Nieprawidłowe wartości pozycji', 'error');
+                    return;
+                }
+
+                const position = { azimuth, elevation };
+                await apiCall('/position', 'POST', position);
+                log(`Poruszam do pozycji: Az ${azimuth}°, El ${elevation}°`);
+
+            } catch (error) {
+                log('Błąd ustawiania pozycji', 'error');
+            }
+        }
+
+        async function getCurrentPosition() {
+            try {
+                const position = await apiCall('/position');
+                document.getElementById('azimuthInput').value = position.azimuth.toFixed(1);
+                document.getElementById('elevationInput').value = position.elevation.toFixed(1);
+                log(`Aktualna pozycja: Az ${position.azimuth.toFixed(1)}°, El ${position.elevation.toFixed(1)}°`);
+            } catch (error) {
+                log('Błąd odczytu pozycji', 'error');
+            }
+        }
+
+        async function stopAntenna() {
+            try {
+                await apiCall('/stop', 'POST');
+                log('ZATRZYMUJĘ ANTENĘ!', 'warning');
+            } catch (error) {
+                log(`Błąd zatrzymania: ${error.message}`, 'error');
+            }
+        }
+
+        async function emergencyStop() {
+            log('ZATRZYMANIE AWARYJNE!', 'warning');
+            try {
+                await apiCall('/stop', 'POST');
+            } catch (error) {
+                log(`Błąd zatrzymania: ${error.message}`, 'error');
+            }
+        }
+
+        async function setObserverLocation() {
+            try {
+                const location = {
+                    latitude: parseFloat(document.getElementById('latitudeInput').value),
+                    longitude: parseFloat(document.getElementById('longitudeInput').value),
+                    elevation: parseFloat(document.getElementById('elevationObsInput').value),
+                    name: document.getElementById('locationNameInput').value
+                };
+
+                await apiCall('/observer', 'POST', location);
+                log(`Ustawiono lokalizację obserwatora: ${location.name}`, 'success');
+
+            } catch (error) {
+                log('Błąd ustawiania lokalizacji', 'error');
+            }
+        }
+
+        async function getObserverLocation() {
+            try {
+                await ensureObserverLocationSet();
+                const location = await apiCall('/observer');
+                document.getElementById('latitudeInput').value = location.latitude;
+                document.getElementById('longitudeInput').value = location.longitude;
+                document.getElementById('elevationObsInput').value = location.elevation;
+                document.getElementById('locationNameInput').value = location.name;
+                log(`Pobrano lokalizację: ${location.name}`, 'success');
+            } catch (error) {
+                log('Błąd pobierania lokalizacji', 'error');
+            }
+        }
+
+        async function startTracking() {
+            try {
+                // Automatycznie ustaw lokalizację jeśli nie jest ustawiona
+                await ensureObserverLocationSet();
+
+                const objectName = document.getElementById('objectNameInput').value.trim();
+                const objectType = document.getElementById('objectTypeSelect').value;
+
+                if (!objectName) {
+                    log('Wybierz obiekt do śledzenia', 'error');
+                    return;
+                }
+
+                const response = await apiCall(`/track/${objectName}?object_type=${objectType}`, 'POST');
+                log(`Rozpoczęto śledzenie: ${objectName}`, 'success');
+
+            } catch (error) {
+                log('Błąd rozpoczynania śledzenia', 'error');
+            }
+        }
+
+        async function stopTracking() {
+            try {
+                await apiCall('/stop_tracking', 'POST');
+                log('Zatrzymano śledzenie', 'success');
+            } catch (error) {
+                log('Błąd zatrzymywania śledzenia', 'error');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('systemLog').textContent = '';
+        }
+
+        function toggleAutoScroll() {
+            autoScroll = !autoScroll;
+            document.getElementById('autoScrollStatus').textContent = autoScroll ? 'ON' : 'OFF';
+        }
+
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.textContent = isConnected ? 'Połączony' : 'Rozłączony';
+            statusElement.className = isConnected ? 'connected' : 'disconnected';
+
+            // Aktualizuj stan kontrolek gdy zmienia się stan połączenia
+            updateControlsState();
+        }
+
+        async function updateStatus() {
+            try {
+                const status = await apiCall('/status');
+
+                // Update connection status
+                isConnected = status.connected;
+                updateConnectionStatus();
+
+                // Update position
+                if (status.current_position) {
+                    document.getElementById('azimuthValue').textContent =
+                        status.current_position.azimuth.toFixed(1) + '°';
+                    document.getElementById('elevationValue').textContent =
+                        status.current_position.elevation.toFixed(1) + '°';
+                } else {
+                    document.getElementById('azimuthValue').textContent = '---°';
+                    document.getElementById('elevationValue').textContent = '---°';
+                }
+
+                // Update moving status
+                document.getElementById('movingStatus').textContent =
+                    status.is_moving ? 'W ruchu' : 'Zatrzymany';
+
+                // Update port status
+                document.getElementById('portStatus').textContent = status.port || '---';
+
+
+            } catch (error) {
+                // Błąd zostanie zalogowany przez apiCall
+            }
+        }
+
+        function startStatusUpdates() {
+            updateInterval = setInterval(updateStatus, 2000);
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        });
+
+        async function moveToObject() {
+            if (!selectedObject) {
+                log('Nie wybrano obiektu astronomicznego', 'error');
+                return;
+            }
+
+            try {
+                // Automatycznie ustaw lokalizację jeśli nie jest ustawiona
+                await ensureObserverLocationSet();
+
+                // Najpierw pobierz pozycję obiektu
+                const response = await apiCall(`/astronomical/position/${selectedObject.name}`);
+
+                if (!response.is_visible) {
+                    log(`Obiekt ${selectedObject.name} nie jest widoczny (elewacja: ${response.elevation.toFixed(1)}°)`, 'warning');
+                    const proceed = confirm(`Obiekt ${selectedObject.name} jest pod horyzontem. Czy kontynuować?`);
+                    if (!proceed) return;
+                }
+
+                log(`Przesuwam do obiektu ${selectedObject.name}: Az ${response.azimuth.toFixed(1)}°, El ${response.elevation.toFixed(1)}°`);
+
+                // Przesuń antenę do pozycji obiektu
+                const position = {
+                    azimuth: response.azimuth,
+                    elevation: response.elevation
+                };
+                await apiCall('/position', 'POST', position);
+
+                // Aktualizuj pola pozycji
+                document.getElementById('azimuthInput').value = response.azimuth.toFixed(1);
+                document.getElementById('elevationInput').value = response.elevation.toFixed(1);
+
+                log(`Poruszam do pozycji obiektu ${selectedObject.name}`, 'success');
+
+            } catch (error) {
+                log(`Błąd przesuwania do obiektu ${selectedObject.name}: ${error.message}`, 'error');
+            }
+        }
+
+        async function ensureObserverLocationSet() {
+            try {
+                // Sprawdź czy lokalizacja jest już ustawiona
+                await apiCall('/observer');
+                return; // Lokalizacja już ustawiona
+            } catch (error) {
+                if (error.message.includes('404')) {
+                    // Lokalizacja nie jest ustawiona, ustaw domyślną
+                    log('Ustawiam domyślną lokalizację obserwatora...', 'warning');
+
+                    const defaultLocation = {
+                        latitude: parseFloat(document.getElementById('latitudeInput').value) || 52.4064,
+                        longitude: parseFloat(document.getElementById('longitudeInput').value) || 16.9252,
+                        elevation: parseFloat(document.getElementById('elevationObsInput').value) || 75,
+                        name: document.getElementById('locationNameInput').value || 'Poznań'
+                    };
+
+                    await apiCall('/observer', 'POST', defaultLocation);
+                    log(`Automatycznie ustawiono lokalizację: ${defaultLocation.name}`, 'success');
+                } else {
+                    throw error; // Inny błąd
+                }
+            }
+        }
+
+        function setPresetPosition(azimuth, elevation) {
+            document.getElementById('azimuthInput').value = azimuth;
+            document.getElementById('elevationInput').value = elevation;
+            log(`Ustawiono zapamiętaną pozycję: Az ${azimuth}°, El ${elevation}°`);
+        }
+
+        async function moveToPresetPosition() {
+            const azimuth = parseFloat(document.getElementById('azimuthInput').value);
+            const elevation = parseFloat(document.getElementById('elevationInput').value);
+
+            if (isNaN(azimuth) || isNaN(elevation)) {
+                log('Nieprawidłowe wartości pozycji', 'error');
+                return;
+            }
+
+            try {
+                // Automatycznie ustaw lokalizację jeśli nie jest ustawiona
+                await ensureObserverLocationSet();
+
+                const response = await apiCall('/position', 'POST', { azimuth, elevation });
+                log(`Przesunięto do pozycji: Az ${azimuth}°, El ${elevation}°`, 'success');
+            } catch (error) {
+                log('Błąd przesuwania do pozycji', 'error');
+            }
+        }
+
+        async function calibrateNorth() {
+            try {
+                const invertAzimuth = document.getElementById('invertAzimuth').checked;
+                const response = await apiCall('/calibrate_azimuth', 'POST', {
+                    current_azimuth: null,
+                    invert_azimuth: invertAzimuth,
+                    save_to_file: true
+                });
+                log(`Kalibracja północy zakończona. Offset: ${response.azimuth_offset.toFixed(2)}°`, 'success');
+            } catch (error) {
+                log('Błąd kalibracji północy: ' + error.message, 'error');
+            }
+        }
+
+        async function resetCalibration() {
+            try {
+                await apiCall('/reset_calibration', 'POST');
+                log('Kalibracja zresetowana do wartości domyślnych', 'success');
+                // Zaktualizuj interfejs
+                await loadCalibrationSettings();
+            } catch (error) {
+                log('Błąd resetowania kalibracji: ' + error.message, 'error');
+            }
+        }
+
+        async function applyAxisSettings() {
+            const invertAzimuth = document.getElementById('invertAzimuth').checked;
+            const invertElevation = document.getElementById('invertElevation').checked;
+            const azimuthOffset = parseFloat(document.getElementById('azimuthOffset').value) || 0;
+            const elevationOffset = parseFloat(document.getElementById('elevationOffset').value) || 0;
+
+            try {
+                await apiCall('/calibration', 'POST', {
+                    azimuth_inverted: invertAzimuth,
+                    azimuth_offset: azimuthOffset,
+                    elevation_inverted: invertElevation,
+                    elevation_offset: elevationOffset
+                });
+                
+                log('Zastosowano ustawienia kalibracji', 'success');
+                
+                // Zapisz ustawienia w lokalnej pamięci
+                localStorage.setItem('invertAzimuth', invertAzimuth);
+                localStorage.setItem('invertElevation', invertElevation);
+                localStorage.setItem('azimuthOffset', azimuthOffset);
+                localStorage.setItem('elevationOffset', elevationOffset);
+                
+            } catch (error) {
+                log('Błąd ustawiania kalibracji: ' + error.message, 'error');
+            }
+        }
+
+        async function loadCalibrationSettings() {
+            try {
+                const calibration = await apiCall('/calibration', 'GET');
+                
+                document.getElementById('invertAzimuth').checked = calibration.azimuth_inverted;
+                document.getElementById('invertElevation').checked = calibration.elevation_inverted;
+                document.getElementById('azimuthOffset').value = calibration.azimuth_offset.toFixed(2);
+                document.getElementById('elevationOffset').value = calibration.elevation_offset.toFixed(2);
+                
+                log('Wczytano ustawienia kalibracji', 'success');
+                
+            } catch (error) {
+                log('Błąd wczytywania kalibracji: ' + error.message, 'error');
+            }
+        }
+
+        function getStepSize() {
+            return parseFloat(document.getElementById('stepSizeInput').value) || 1.0;
+        }
+
+        async function singleAxisMove(axis, direction) {
+            const stepSize = getStepSize();
+            
+            try {
+                await apiCall('/move_axis', 'POST', {
+                    axis: axis,
+                    direction: direction,
+                    amount: stepSize
+                });
+                
+                log(`Ruch ${axis} ${direction} o ${stepSize}°`);
+                
+            } catch (error) {
+                log(`Błąd ruchu w osi: ${error.message}`, 'error');
+            }
+        }
+
+        function applyOffsets() {
+            // Ta funkcja jest teraz zastąpiona przez applyAxisSettings()
+            applyAxisSettings();
+        }
+
+        function toggleAdvancedOptions(button) {
+            const container = document.getElementById('advancedOptionsContainer');
+            const isVisible = container.style.display !== 'none';
+            container.style.display = isVisible ? 'none' : 'grid';
+            button.textContent = isVisible ? 'Opcje Zaawansowane ▼' : 'Opcje Zaawansowane ▲';
+        }
+
+        // Zaktualizowana funkcja inicjalizacji ustawień z pamięci lokalnej
+        function loadLocalSettings() {
+            const invertAzimuth = localStorage.getItem('invertAzimuth') === 'true';
+            const invertElevation = localStorage.getItem('invertElevation') === 'true';
+            const azimuthOffset = parseFloat(localStorage.getItem('azimuthOffset')) || 0;
+            const elevationOffset = parseFloat(localStorage.getItem('elevationOffset')) || 0;
+
+            document.getElementById('invertAzimuth').checked = invertAzimuth;
+            document.getElementById('invertElevation').checked = invertElevation;
+            document.getElementById('azimuthOffset').value = azimuthOffset;
+            document.getElementById('elevationOffset').value = elevationOffset;
+        }
+
+        // Przywróć ustawienia przy starcie
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLocalSettings();
+            
+            // Wczytaj kalibrację z serwera po połączeniu
+            setTimeout(() => {
+                if (isConnected) {
+                    loadCalibrationSettings();
+                }
+            }, 2000);
+        });
+        async function startSpectrumScan() {
+    try {
+        await setBiasTee();
+        const data = {
+            start_freq: parseFloat(document.getElementById('startFreqInput').value),
+            stop_freq: parseFloat(document.getElementById('stopFreqInput').value),
+            step_freq: parseFloat(document.getElementById('stepFreqInput').value),
+            sample_rate: parseFloat(document.getElementById('sampleRateInput').value),
+            gain: parseFloat(document.getElementById('gainInput').value),
+            n_samples: parseInt(document.getElementById('nSamplesInput').value),
+            channel: 0
+        };
+
+        const response = await fetch('/spectrum/scan/json', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            log(`Błąd skanowania: ${err.detail}`, 'error');
+            return;
+        }
+
+        const result = await response.json();
+        log(`Skanowanie zakończone`, 'success');
+
+        // dekoduj base64 i zapisz jako plik ZIP
+        const byteCharacters = atob(result.zip_base64);
+        const byteNumbers = new Array(byteCharacters.length).fill(0).map((_, i) => byteCharacters.charCodeAt(i));
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/zip' });
+
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = result.filename || "spectrum_results.zip";
+        link.click();
+
+    } catch (err) {
+        log(`Błąd podczas skanowania: ${err.message}`, 'error');
+    }
+}
+async function setBiasTee() {
+    const state = document.getElementById('biasTeeSelect').value;
+
+    try {
+        const response = await fetch(`/spectrum/biastee/${state}`, {
+            method: 'PUT'
+        });
+
+        const result = await response.json();
+        log(`Bias-Tee: ${result.status}`, 'success');
+    } catch (err) {
+        log(`Błąd Bias-Tee: ${err.message}`, 'error');
+    }
+}
+
+    </script>
+</body>
+</html>
