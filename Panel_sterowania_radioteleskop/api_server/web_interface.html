@@ -392,7 +392,7 @@
 }
 
 .input-pair input {
-  width: 140px; /* ← to jest ten skrót – dopasuj wartość do czerwonej linii */
+  width: 140px;
   padding: 10px;
   border: 1px solid rgba(255,255,255,0.3);
   border-radius: 5px;
@@ -546,13 +546,6 @@
                             <div class="astronomical-objects">
                                 <div class="object-button" onclick="selectAstronomicalObject('sun', 'SUN')">Słońce</div>
                                 <div class="object-button" onclick="selectAstronomicalObject('moon', 'MOON')">Księżyc</div>
-                                <div class="object-button" onclick="selectAstronomicalObject('mercury', 'PLANET')">Merkury</div>
-                                <div class="object-button" onclick="selectAstronomicalObject('venus', 'PLANET')">Wenus</div>
-                                <div class="object-button" onclick="selectAstronomicalObject('mars', 'PLANET')">Mars</div>
-                                <div class="object-button" onclick="selectAstronomicalObject('jupiter', 'PLANET')">Jowisz</div>
-                                <div class="object-button" onclick="selectAstronomicalObject('saturn', 'PLANET')">Saturn</div>
-                                <div class="object-button" onclick="selectAstronomicalObject('uranus', 'PLANET')">Uran</div>
-                                <div class="object-button" onclick="selectAstronomicalObject('neptune', 'PLANET')">Neptun</div>
                             </div>
                         </div>
 
@@ -580,7 +573,6 @@
                             <label>Typ obiektu:</label>
                             <select id="objectTypeSelect">
                                 <option value="STAR">Gwiazda</option>
-                                <option value="PLANET">Planeta</option>
                                 <option value="MOON">Księżyc</option>
                                 <option value="SUN">Słońce</option>
                             </select>
@@ -975,18 +967,6 @@
                     break;
                 case 'MOON':
                     info = 'Księżyc - naturalny satelita Ziemi';
-                    break;
-                case 'PLANET':
-                    const planetInfo = {
-                        'mercury': 'Merkury - najmniejsza planeta Układu Słonecznego',
-                        'venus': 'Wenus - najgorętszą planetą Układu Słonecznego',
-                        'mars': 'Mars - "Czerwona Planeta"',
-                        'jupiter': 'Jowisz - największa planeta Układu Słonecznego',
-                        'saturn': 'Saturn - planeta z pierścieniami',
-                        'uranus': 'Uran - lodowa planeta',
-                        'neptune': 'Neptun - najbardziej odległa planeta'
-                    };
-                    info = planetInfo[name.toLowerCase()] || `${name} - planeta`;
                     break;
                 case 'STAR':
                     const starInfo = {
